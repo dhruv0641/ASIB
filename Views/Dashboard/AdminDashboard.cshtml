@@ -1,0 +1,1171 @@
+@model ASIB.Models.ViewModels.AdminDashboardViewModel
+
+@{
+    Layout = null;
+    var page = Model.Page ?? "dashboard";
+    var pageTitle = Model.PageTitle ?? "Admin Panel";
+    var adminEmail = Model.AdminEmail ?? "admin";
+    var flash = Model.Flash ?? "";
+    var flashType = Model.FlashType ?? "info";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>@pageTitle | Admin Panel</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <link rel="stylesheet" href="/css/admin.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    </head>
+    <body>
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="logo">AS</div>
+                <h1>Admin Panel</h1>
+            </div>
+            <nav class="menu">
+                <a href="?page=dashboard" class="@(page == "dashboard" ? "active" : "")"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</a>
+                <a href="?page=verification" class="@(page == "verification" ? "active" : "")"><i class="fas fa-user-check fa-fw"></i> Verify Users</a>
+                <a href="?page=suspend" class="@(page == "suspend" ? "active" : "")"><i class="fas fa-user-slash fa-fw"></i> Suspend Users</a>
+                <a href="?page=all_users" class="@(page == "all_users" ? "active" : "")"><i class="fas fa-users fa-fw"></i> All Users</a>
+                <a href="?page=events" class="@(page == "events" ? "active" : "")"><i class="fas fa-calendar-alt fa-fw"></i> Manage Events</a>
+                <a href="?page=announcements" class="@(page == "announcements" ? "active" : "")"><i class="fas fa-bullhorn fa-fw"></i> Announcements</a>
+                <a href="?page=promotion" class="@(page == "promotion" ? "active" : "")"><i class="fas fa-graduation-cap fa-fw"></i> Promotions</a>
+                <a href="?page=add_user" class="@(page == "add_user" ? "active" : "")"><i class="fas fa-user-plus fa-fw"></i> Add User</a>
+                <a href="?page=bulk_insert" class="@(page == "bulk_insert" ? "active" : "")"><i class="fas fa-file-upload fa-fw"></i> Bulk Insert</a>
+                <a href="?page=admin_log" class="@(page == "admin_log" ? "active" : "")"><i class="fas fa-clipboard-list fa-fw"></i> Admin Log</a>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <div class="container-wide">
+                <div class="header">
+                    <button class="menu-toggle" id="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <h2>@pageTitle</h2>
+                    <div class="admin">
+                        <i class="fas fa-user-shield"></i>
+                        <span class="admin-text">Signed in as: @adminEmail</span>
+                        <a asp-controller="Auth" asp-action="Logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+
+            @if (!string.IsNullOrEmpty(flash))
+            {
+                <div class="flash @(flashType == "error" ? "error" : "info")">@Html.Raw(flash)</div>
+            }
+
+            @if (page == "dashboard")
+            {
+                <section class="cards">
+                    <div class="card"> <div class="stat"><small>Active Users</small><div class="num">@Model.ActiveCount</div></div> <a href="?page=all_users&filter=active" class="view-link">View List <i class="fas fa-arrow-right"></i></a> </div>
+                    <div class="card"> <div class="stat"><small>Pending Users</small><div class="num">@Model.PendingCount</div></div> <a href="?page=verification" class="view-link">Verify <i class="fas fa-arrow-right"></i></a> </div>
+                    <div class="card"> <div class="stat"><small>Rejected Users</small><div class="num">@Model.RejectedCount</div></div> <a href="?page=verification" class="view-link">View List <i class="fas fa-arrow-right"></i></a> </div>
+                    <div class="card"> <div class="stat"><small>Blocked Users</small><div class="num">@Model.BlockedCount</div></div> <a href="?page=suspend" class="view-link">Manage <i class="fas fa-arrow-right"></i></a> </div>
+                    <div class="card"> <div class="stat"><small>Students</small><div class="num">@Model.StudentCount</div></div> <a href="?page=all_users&filter=student" class="view-link">View List <i class="fas fa-arrow-right"></i></a> </div>
+                    <div class="card"> <div class="stat"><small>Faculty</small><div class="num">@Model.FacultyCount</div></div> <a href="?page=all_users&filter=faculty" class="view-link">View List <i class="fas fa-arrow-right"></i></a> </div>
+                    <div class="card"> <div class="stat"><small>Alumni</small><div class="num">@Model.AlumniCount</div></div> <a href="?page=all_users&filter=alumni" class="view-link">View List <i class="fas fa-arrow-right"></i></a> </div>
+                </section>
+            }
+            else if (page == "verification")
+            {
+                var statusLabels = new Dictionary<int, string> { { 1, "Active" }, { 0, "Pending" }, { -1, "Rejected" }, { 2, "Blocked" } };
+                var statusClasses = new Dictionary<int, string> { { 1, "active" }, { 0, "pending" }, { -1, "rejected" }, { 2, "blocked" } };
+                <div class="table-wrap">
+                    <table>
+                        <thead> 
+                            <tr> 
+                                <th>#ID</th> 
+                                <th>Name</th> 
+                                <th>Email</th> 
+                                <th>Contact</th> 
+                                <th>Enrollment No.</th> <th>Requested Role</th> 
+                                <th>Status</th> 
+                                <th>Actions</th> 
+                            </tr> 
+                        </thead>
+                        <tbody>
+                            @if (Model.VerificationList == null || Model.VerificationList.Count == 0)
+                            {
+                                <tr><td colspan="8">No pending or rejected registrations.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var u in Model.VerificationList)
+                                {
+                                    var fullName = $"{u.FirstName} {u.LastName}".Trim();
+                                    <tr>
+                                        <td>@u.UserId</td>
+                                        <td>@fullName</td>
+                                        <td>@u.Email</td>
+                                        <td>@u.ContactNumber</td>
+                                        <td>@(string.IsNullOrEmpty(u.EnrollmentNumber) ? "—" : u.EnrollmentNumber)</td>
+                                        <td>@(string.IsNullOrEmpty(u.RequestedRole) ? "—" : u.RequestedRole)</td>
+                                        <td> <span class="badge @(statusClasses.ContainsKey(u.VerificationStatus) ? statusClasses[u.VerificationStatus] : "")">@(statusLabels.ContainsKey(u.VerificationStatus) ? statusLabels[u.VerificationStatus] : "Unknown")</span> </td>
+                                        <td class="actions-cell">
+                                            <form method="post" action="?page=verification"> <input type="hidden" name="user_id" value="@u.UserId"> <button class="btn btn-approve btn-sm" name="action" value="approve"><i class="fas fa-check"></i> Approve</button> </form>
+                                            @if (u.VerificationStatus == 0)
+                                            {
+                                                <form method="post" action="?page=verification"> <input type="hidden" name="user_id" value="@u.UserId"> <button class="btn btn-reject btn-sm" name="action" value="reject"><i class="fas fa-times"></i> Reject</button> </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (page == "suspend")
+            {
+                <h3>Active Users</h3>
+                <div class="table-wrap" style="margin-top:10px">
+                    <table>
+                        <thead> <tr> <th>#ID</th> <th>Name</th> <th>Email</th> <th>Role</th> <th>Action</th> </tr> </thead>
+                        <tbody>
+                            @if (Model.ActiveUsers == null || Model.ActiveUsers.Count == 0)
+                            {
+                                <tr><td colspan="5">No active users found.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var u in Model.ActiveUsers)
+                                {
+                                    var fullName = $"{u.FirstName} {u.LastName}".Trim();
+                                    <tr>
+                                        <td>@u.UserId</td>
+                                        <td>@fullName</td>
+                                        <td>@u.Email</td>
+                                        <td>@(string.IsNullOrEmpty(u.Role) ? "—" : u.Role)</td>
+                                        <td class="actions-cell">
+                                            <button type="button" class="btn btn-block btn-sm" onclick="promptBlockReason(@u.UserId, '@(fullName.Replace("'", "\\'"))')"> <i class="fas fa-user-lock"></i> Block </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <h3 style="margin-top:2rem">Blocked Users</h3>
+                <div class="table-wrap" style="margin-top:10px">
+                    <table>
+                        <thead> <tr> <th>#ID</th> <th>Name</th> <th>Email</th> <th>Role</th> <th>Action</th> </tr> </thead>
+                        <tbody>
+                            @if (Model.BlockedUsers == null || Model.BlockedUsers.Count == 0)
+                            {
+                                <tr><td colspan="5">No blocked users found.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var u in Model.BlockedUsers)
+                                {
+                                    var fullName = $"{u.FirstName} {u.LastName}".Trim();
+                                    <tr>
+                                        <td>@u.UserId</td>
+                                        <td>@fullName</td>
+                                        <td>@u.Email</td>
+                                        <td>@(string.IsNullOrEmpty(u.Role) ? "—" : u.Role)</td>
+                                        <td class="actions-cell">
+                                            <form method="post" action="?page=suspend"> <input type="hidden" name="user_id" value="@u.UserId"> <button class="btn btn-unblock btn-sm" name="action" value="unblock"><i class="fas fa-unlock"></i> Unblock</button> </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (page == "all_users")
+            {
+                var statusLabels = new Dictionary<int, string> { { 1, "Active" }, { 0, "Pending" }, { -1, "Rejected" }, { 2, "Blocked" } };
+                var statusClasses = new Dictionary<int, string> { { 1, "active" }, { 0, "pending" }, { -1, "rejected" }, { 2, "blocked" } };
+
+                if (Model.UserDetails != null && Model.AllUsersView == "detail")
+                {
+                    var user = Model.UserDetails.User;
+                    var profile = Model.UserDetails.Profile;
+                    var fullName = $"{user.FirstName} {user.MiddleName} {user.LastName}".Trim();
+                    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <a href="?page=all_users" class="btn btn-secondary user-list-back-btn"><i class="fas fa-arrow-left"></i> Back to User List</a>
+                        <button type="button" id="print-user-pdf-btn" class="btn btn-info"><i class="fas fa-print"></i> Print User Report</button>
+                    </div>
+
+                    <div id="user-report-content">
+                        <section class="cards">
+                            <div class="card"> <div class="stat"><small>Following</small><div class="num">@Model.UserDetails.FollowingCount</div></div> </div>
+                            <div class="card"> <div class="stat"><small>Connections</small><div class="num">@Model.UserDetails.ConnectionCount</div></div> </div>
+                            <div class="card"> <div class="stat"><small>Events Joined</small><div class="num">@Model.UserDetails.EventCount</div></div> </div>
+                        </section>
+
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <h3>User Information</h3>
+                            <div class="user-details">
+                                <dl>
+                                    <dt>User ID</dt>
+                                    <dd>#@user.UserId</dd>
+                                    <dt>Full Name</dt>
+                                    <dd>@fullName</dd>
+                                    <dt>Email</dt>
+                                    <dd>@user.Email</dd>
+                                    <dt>Contact</dt>
+                                    <dd>@(string.IsNullOrEmpty(user.ContactNumber) ? "—" : user.ContactNumber)</dd>
+                                    <dt>Role</dt>
+                                    <dd>@(string.IsNullOrEmpty(user.Role) ? "—" : user.Role)</dd>
+                                    <dt>Batch Year</dt>
+                                    <dd>@(string.IsNullOrEmpty(user.BatchYear) ? "—" : user.BatchYear)</dd>
+
+                                    <dt>Enrollment No.</dt>
+                                    <dd>@(string.IsNullOrEmpty(user.EnrollmentNumber) ? "—" : user.EnrollmentNumber)</dd>
+
+                                    <dt>Status</dt>
+                                    <dd><span class="badge @(statusClasses.ContainsKey(user.VerificationStatus) ? statusClasses[user.VerificationStatus] : "")">@(statusLabels.ContainsKey(user.VerificationStatus) ? statusLabels[user.VerificationStatus] : "Unknown")</span></dd>
+                                    <dt>Joined</dt>
+                                    <dd>@(user.CreatedAt.HasValue ? user.CreatedAt.Value.ToString("ddd, MMM d, yyyy") : "—")</dd>
+                                    <dt>Address</dt>
+                                    <dd>@(string.IsNullOrEmpty(user.Address) ? "—" : user.Address)</dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <h3>Profile Details</h3>
+                            <div class="user-details">
+                                <dl>
+                                    <dt>Headline</dt>
+                                    <dd>@(string.IsNullOrEmpty(profile?.Headline) ? "—" : profile!.Headline)</dd>
+
+                                    <dt>Bio</dt>
+                                    <dd class="bio">@Html.Raw(!string.IsNullOrEmpty(profile?.Bio) ? System.Text.Encodings.Web.HtmlEncoder.Default.Encode(profile!.Bio).Replace("\n", "<br>") : "<em>No bio provided.</em>")</dd>
+                                    <dt>Skills</dt>
+                                    <dd class="skills">@Html.Raw(!string.IsNullOrEmpty(profile?.Skills) ? System.Text.Encodings.Web.HtmlEncoder.Default.Encode(profile!.Skills).Replace("\n", "<br>") : "<em>No skills listed.</em>")</dd>
+                                    <dt>Experience</dt>
+                                    <dd class="bio">@Html.Raw(!string.IsNullOrEmpty(profile?.Experience) ? System.Text.Encodings.Web.HtmlEncoder.Default.Encode(profile!.Experience).Replace("\n", "<br>") : "<em>No experience listed.</em>")</dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Recent Posts</h3>
+                            <div class="table-wrap" style="margin-top: 0;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Content</th>
+                                            <th>Image</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.UserDetails.Posts == null || Model.UserDetails.Posts.Count == 0)
+                                        {
+                                            <tr><td colspan="3"><em>This user has not made any posts.</em></td></tr>
+                                        }
+                                        else
+                                        {
+                                            foreach (var post in Model.UserDetails.Posts)
+                                            {
+                                                var content = post.Content ?? "";
+                                                var shortContent = content.Length > 100 ? content.Substring(0, 100) : content;
+                                                <tr>
+                                                    <td style="white-space: nowrap;">@(post.CreatedAt.HasValue ? post.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm") : "")</td>
+                                                    <td style="white-space: normal; word-break: break-word; min-width: 300px;">
+                                                        @shortContent@(content.Length > 100 ? "..." : "")
+                                                    </td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(post.PhotoUrl))
+                                                        {
+                                                            <a href="@post.PhotoUrl" target="_blank">View Image</a>
+                                                        }
+                                                        else
+                                                        {
+                                                            @:—
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if (Model.UserDetails.Posts != null && Model.UserDetails.Posts.Count >= 10)
+                            {
+                                <p style="text-align: right; margin-top: 10px; font-size: 0.9rem;"><em>Showing last 10 posts.</em></p>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <nav class="filter-nav">
+                        <span>Filter:</span>
+                        <a href="?page=all_users&filter=all" class="@(Model.AllUsersFilter == "all" || Model.AllUsersFilter == "" ? "active-filter" : "")">All</a>
+                        <a href="?page=all_users&filter=active" class="@(Model.AllUsersFilter == "active" ? "active-filter" : "")">Active</a>
+                        <a href="?page=all_users&filter=pending" class="@(Model.AllUsersFilter == "pending" ? "active-filter" : "")">Pending</a>
+                        <a href="?page=all_users&filter=rejected" class="@(Model.AllUsersFilter == "rejected" ? "active-filter" : "")">Rejected</a>
+                        <a href="?page=all_users&filter=blocked" class="@(Model.AllUsersFilter == "blocked" ? "active-filter" : "")">Blocked</a>
+                        <span>|</span>
+                        <a href="?page=all_users&filter=student" class="@(Model.AllUsersFilter == "student" ? "active-filter" : "")">Students</a>
+                        <a href="?page=all_users&filter=faculty" class="@(Model.AllUsersFilter == "faculty" ? "active-filter" : "")">Faculty</a>
+                        <a href="?page=all_users&filter=alumni" class="@(Model.AllUsersFilter == "alumni" ? "active-filter" : "")">Alumni</a>
+
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="user-search-input" placeholder="Search by name, email, role, enrollment...">
+                        </div>
+                    </nav>
+
+                    <div class="table-wrap">
+                        <table id="user-table">
+                            <thead> 
+                                <tr> 
+                                    <th>#ID</th> 
+                                    <th>Name</th> 
+                                    <th>Email</th> 
+                                    <th>Enrollment No.</th> <th>Role</th> 
+                                    <th>Status</th> 
+                                    <th>Actions</th> 
+                                </tr> 
+                            </thead>
+                            <tbody>
+                                @if (Model.AllUsersList == null || Model.AllUsersList.Count == 0)
+                                {
+                                    <tr><td colspan="7">No users found@(Model.AllUsersFilter != "" && Model.AllUsersFilter != "all" ? $" for filter: {Model.AllUsersFilter}" : "").</td></tr>
+                                }
+                                else
+                                {
+                                    foreach (var u in Model.AllUsersList)
+                                    {
+                                        var name = $"{u.FirstName} {u.LastName}".Trim();
+                                        var role = string.IsNullOrEmpty(u.Role) ? "—" : u.Role;
+                                        var enrollment = u.EnrollmentNumber ?? "";
+                                        var searchTerm = $"{name} {u.Email} {role} {enrollment}".ToLowerInvariant();
+                                        <tr data-search-term="@searchTerm">
+                                            <td>@u.UserId</td>
+                                            <td>@name</td>
+                                            <td>@u.Email</td>
+                                            <td>@(string.IsNullOrEmpty(enrollment) ? "—" : enrollment)</td> <td>@role</td>
+                                            <td> <span class="badge @(statusClasses.ContainsKey(u.VerificationStatus) ? statusClasses[u.VerificationStatus] : "")">@(statusLabels.ContainsKey(u.VerificationStatus) ? statusLabels[u.VerificationStatus] : "Unknown")</span> </td>
+                                            <td class="actions-cell"> 
+                                                <a href="?page=all_users&view=detail&id=@u.UserId" class="btn btn-view btn-sm"><i class="fas fa-eye"></i> View</a> 
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+            else if (page == "events")
+            {
+                if (Model.EventsView == "list")
+                {
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr> <th>#ID</th> <th>Event Title</th> <th>Creator</th> <th>Start Time</th> <th>Actions</th> </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.EventsList == null || Model.EventsList.Count == 0)
+                                {
+                                    <tr><td colspan="5">No events found.</td></tr>
+                                }
+                                else
+                                {
+                                    foreach (var ev in Model.EventsList)
+                                    {
+                                        var creatorName = $"{ev.CreatorFirstName} {ev.CreatorLastName}".Trim();
+                                        <tr>
+                                            <td>@ev.EventId</td>
+                                            <td>@ev.Title</td>
+                                            <td>@(string.IsNullOrEmpty(creatorName) ? "N/A" : creatorName)</td>
+                                            <td>@(ev.StartTime.HasValue ? ev.StartTime.Value.ToString("ddd, MMM d, yyyy, h:mm tt") : "")</td>
+                                            <td class="actions-cell">
+                                                <a href="?page=events&view=detail&id=@ev.EventId" class="btn btn-view btn-sm"><i class="fas fa-eye"></i> View</a>
+                                                <form method="post" action="?page=events" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete this event and all its join requests? This cannot be undone.');">
+                                                    <input type="hidden" name="action" value="delete_event">
+                                                    <input type="hidden" name="event_id" value="@ev.EventId">
+                                                    <button type="submit" class="btn btn-reject btn-sm"><i class="fas fa-trash"></i> Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else if (Model.EventsView == "detail" && Model.EventDetails != null)
+                {
+                    var ev = Model.EventDetails.Event;
+                    <a href="?page=events" class="btn btn-secondary" style="margin-bottom: 1.5rem;"><i class="fas fa-arrow-left"></i> Back to Event List</a>
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h3>Event Details</h3>
+                        <div class="event-details">
+                            <dl>
+                                <dt>Event ID</dt> <dd>#@ev.EventId</dd>
+                                <dt>Title</dt> <dd>@ev.Title</dd>
+                                <dt>Creator</dt> <dd>@($"{ev.CreatorFirstName} {ev.CreatorLastName}".Trim()) (User ID: @ev.CreatorId)</dd>
+                                <dt>Start Time</dt> <dd>@(ev.StartTime.HasValue ? ev.StartTime.Value.ToString("ddd, MMM d, yyyy, h:mm tt") : "")</dd>
+                                <dt>End Time</dt> <dd>@(ev.EndTime.HasValue ? ev.EndTime.Value.ToString("ddd, MMM d, yyyy, h:mm tt") : "—")</dd>
+                                <dt>Meeting URL</dt> <dd>@(!string.IsNullOrEmpty(ev.MeetingUrl) ? Html.Raw($"<a href=\"{System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ev.MeetingUrl)}\" target=\"_blank\">{System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ev.MeetingUrl)}</a>") : Html.Raw("—"))</dd>
+                                <dt>Description</dt> <dd class="description">@Html.Raw(!string.IsNullOrEmpty(ev.Description) ? System.Text.Encodings.Web.HtmlEncoder.Default.Encode(ev.Description).Replace("\n", "<br>") : "<em>No description provided.</em>")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    var attendees = Model.EventDetails.Attendees ?? new List<ASIB.Models.ViewModels.AdminEventAttendee>();
+                    <div class="card">
+                        <h3>Approved Attendees (@attendees.Count)</h3>
+                        <div class="table-wrap" style="margin-top: 0;">
+                            <table>
+                                <thead> <tr> <th>Name</th> <th>Email</th> <th>Role</th> </tr> </thead>
+                                <tbody>
+                                    @if (attendees.Count == 0)
+                                    {
+                                        <tr><td colspan="3">No approved attendees for this event yet.</td></tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var user in attendees)
+                                        {
+                                            <tr>
+                                                <td>@($"{user.FirstName} {user.LastName}".Trim())</td>
+                                                <td>@user.Email</td>
+                                                <td>@(string.IsNullOrEmpty(user.Role) ? "—" : user.Role)</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+            else if (page == "announcements")
+            {
+                if (Model.AnnouncementsView == "add" || Model.AnnouncementsView == "edit")
+                {
+                    var edit = Model.AnnouncementEdit;
+                    var isEdit = Model.AnnouncementsView == "edit";
+                    <a href="?page=announcements" class="btn btn-secondary" style="margin-bottom: 1.5rem;"><i class="fas fa-arrow-left"></i> Back to List</a>
+                    <div class="form-card">
+                        <form method="POST" action="?page=announcements">
+                            <input type="hidden" name="action" value="@(isEdit ? "edit" : "add")">
+                            @if (isEdit && edit != null)
+                            {
+                                <input type="hidden" name="announcement_id" value="@edit.AnnouncementId">
+                            }
+
+                            <div class="form-group">
+                                <label for="title">Title</label>
+                                <input type="text" id="title" name="title" value="@(edit?.Title ?? "")" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="content">Content</label>
+                                <textarea id="content" name="content" required>@(edit?.Content ?? "")</textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="is_active">
+                                    <input type="checkbox" id="is_active" name="is_active" value="1" @(((edit != null && edit.IsActive) || !isEdit) ? "checked" : "")>
+                                    Active (Visible to users)
+                                </label>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-approve">
+                                    <i class="fas fa-save"></i> @(isEdit ? "Save Changes" : "Create Announcement")
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <a href="?page=announcements&view=add" class="btn btn-approve" style="margin-bottom: 1.5rem;"><i class="fas fa-plus"></i> Add New Announcement</a>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Posted by</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Announcements == null || Model.Announcements.Count == 0)
+                                {
+                                    <tr><td colspan="5">No announcements found.</td></tr>
+                                }
+                                else
+                                {
+                                    foreach (var item in Model.Announcements)
+                                    {
+                                        <tr>
+                                            <td style="white-space: normal; word-break: break-word; min-width: 200px;">@item.Title</td>
+                                            <td>
+                                                @if (item.IsActive)
+                                                {
+                                                    <span class="badge active">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge pending">Inactive</span>
+                                                }
+                                            </td>
+                                            <td>@item.AdminEmail</td>
+                                            <td>@(item.CreatedAt.HasValue ? item.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm") : "")</td>
+                                            <td class="actions-cell">
+                                                <a href="?page=announcements&view=edit&id=@item.AnnouncementId" class="btn btn-info btn-sm"><i class="fas fa-edit"></i> Edit</a>
+                                                <form method="post" action="?page=announcements" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this announcement?');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="announcement_id" value="@item.AnnouncementId">
+                                                    <button type="submit" class="btn btn-reject btn-sm"><i class="fas fa-trash"></i> Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+            else if (page == "admin_log")
+            {
+                <h3 style="margin-top:0">Action Reports</h3>
+                <form method="GET" class="report-form" action="?">
+                    <input type="hidden" name="page" value="admin_log">
+                    <label for="start_date">From:</label>
+                    <input type="date" id="start_date" name="start_date" value="@(Model.StartDate ?? "")" required>
+                    <label for="end_date">To:</label>
+                    <input type="date" id="end_date" name="end_date" value="@(Model.EndDate ?? "")" required>
+                    <button type="submit" class="btn btn-approve"><i class="fas fa-chart-bar"></i> Generate Report</button>
+                    @if (Model.ReportData != null)
+                    {
+                        <button type="button" id="print-pdf-btn" class="btn btn-info"><i class="fas fa-print"></i> Print Report</button>
+                    }
+                </form>
+                <div id="report-content"> 
+                    @if (Model.ReportData != null)
+                    {
+                        <div class="card report-card" id="report-summary-card">
+                            <h3>Report from @Model.ReportData.StartDate to @Model.ReportData.EndDate</h3>
+                            <ul>
+                                <li>Accounts Approved <span><strong>@Model.ReportData.ApproveUser</strong></span></li>
+                                <li>Accounts Rejected <span><strong>@Model.ReportData.RejectUser</strong></span></li>
+                                <li>Accounts Blocked <span><strong>@Model.ReportData.BlockUser</strong></span></li>
+                                <li style="border-top: 2px solid var(--text); font-weight: 600;">Total Actions <span><strong>@Model.ReportData.Total</strong></span></li>
+                            </ul>
+                        </div>
+                    }
+                    <h3 style="margin-top: 2rem;">@(Model.ReportData != null ? "Detailed Log for Report" : "Full Action Log (Last 50)")</h3>
+                    <div class="table-wrap">
+                        <table>
+                            <thead> 
+                                <tr> 
+                                    <th>Timestamp</th> 
+                                    <th>Admin</th> 
+                                    <th>Action</th> 
+                                    <th>Target User</th> 
+                                    <th>Reason</th> 
+                                </tr> 
+                            </thead>
+                            <tbody>
+                                @if (Model.AdminLogs == null || Model.AdminLogs.Count == 0)
+                                {
+                                    <tr><td colspan="5">No admin actions recorded@(Model.ReportData != null ? " for this period" : " yet").</td></tr>
+                                }
+                                else
+                                {
+                                    foreach (var log in Model.AdminLogs)
+                                    {
+                                        var action = !string.IsNullOrEmpty(log.ActionType) ? char.ToUpper(log.ActionType[0]) + log.ActionType.Substring(1).Replace("_", " ") : "N/A";
+                                        string targetText;
+                                        if (log.TargetUserId.HasValue && log.TargetUserId.Value > 0)
+                                        {
+                                            var name = $"{log.UserFirstName} {log.UserLastName}".Trim();
+                                            targetText = "<strong>User:</strong> " + (string.IsNullOrEmpty(name) ? (string.IsNullOrEmpty(log.UserEmail) ? $"User #{log.TargetUserId}" : log.UserEmail) : name);
+                                        }
+                                        else if (log.TargetEventId.HasValue && log.TargetEventId.Value > 0)
+                                        {
+                                            targetText = $"<strong>Event ID:</strong> #{log.TargetEventId.Value}";
+                                        }
+                                        else
+                                        {
+                                            targetText = "—";
+                                        }
+                                        <tr>
+                                            <td>@(log.ActionTime.HasValue ? log.ActionTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "")</td>
+                                            <td>@(string.IsNullOrEmpty(log.AdminEmail) ? "N/A" : log.AdminEmail)</td>
+                                            <td>@action</td>
+                                            <td class="log-target-cell">@Html.Raw(targetText)</td>
+                                            <td class="reason-cell">@(!string.IsNullOrEmpty(log.Reason) ? log.Reason : "—")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div> 
+            }
+            else if (page == "promotion")
+            {
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h3>Eligible for Promotion (3+ Years)</h3>
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="promo-search" placeholder="Search eligible students...">
+                        </div>
+                    </div>
+
+                    <form method="POST" action="?page=promotion" id="bulk-promo-form">
+                        <input type="hidden" name="action" value="promote_bulk">
+
+                        <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+                            <table id="promo-table">
+                                <thead>
+                                    <tr>
+                                        <th width="40"><input type="checkbox" id="select-all"></th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Batch</th>
+                                        <th>Enrollment</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.EligibleStudents == null || Model.EligibleStudents.Count == 0)
+                                    {
+                                        <tr><td colspan="6" style="text-align:center;">No students currently eligible for promotion.</td></tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var s in Model.EligibleStudents)
+                                        {
+                                            <tr>
+                                                <td><input type="checkbox" name="selected_users[]" value="@s.UserId" class="user-checkbox"></td>
+                                                <td>@($"{s.FirstName} {s.LastName}".Trim())</td>
+                                                <td>@s.Email</td>
+                                                <td><span class="badge active">@s.BatchYear</span></td>
+                                                <td>@(string.IsNullOrEmpty(s.EnrollmentNumber) ? "—" : s.EnrollmentNumber)</td>
+                                                <td>
+                                                    <button type="button" class="btn btn-approve btn-sm" onclick="submitSinglePromote(@s.UserId)">
+                                                        <i class="fas fa-level-up-alt"></i> Promote
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top: 1rem; padding-top:1rem; border-top:1px solid #eee;">
+                            <button type="submit" class="btn btn-approve" onclick="return confirm('Promote all selected users to Alumni?');">
+                                <i class="fas fa-users"></i> Promote Selected
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card" style="margin-bottom: 2rem;">
+                    <h3>Recently Promoted Alumni</h3>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Batch</th>
+                                    <th>Promoted At</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.PromotedAlumni == null || Model.PromotedAlumni.Count == 0)
+                                {
+                                    <tr><td colspan="5" style="text-align:center;">No promoted alumni records found.</td></tr>
+                                }
+                                else
+                                {
+                                    foreach (var a in Model.PromotedAlumni)
+                                    {
+                                        <tr>
+                                            <td>@($"{a.FirstName} {a.LastName}".Trim())</td>
+                                            <td>@a.Email</td>
+                                            <td><span class="badge active">@a.BatchYear</span></td>
+                                            <td>@(a.PromotedAt.HasValue ? a.PromotedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") : "—")</td>
+                                            <td>
+                                                <form method="POST" action="?page=promotion" onsubmit="return confirm('Demote this alumni back to Student?');">
+                                                    <input type="hidden" name="action" value="demote">
+                                                    <input type="hidden" name="user_id" value="@a.UserId">
+                                                    <button type="submit" class="btn btn-reject btn-sm">
+                                                        <i class="fas fa-level-down-alt"></i> Demote
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Full User Role Management</h3>
+                    <p>Promote or demote users in bulk and by role. This is for admin control and should be used carefully.</p>
+
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <select id="manage-role-filter" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc;">
+                            <option value="all">All Roles</option>
+                            <option value="Student">Student</option>
+                            <option value="Alumni">Alumni</option>
+                            <option value="Faculty">Faculty</option>
+                        </select>
+
+                        <select id="manage-batch-filter" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc;">
+                            <option value="all">All Batch Years</option>
+                            @if (Model.PromotionBatchYears != null)
+                            {
+                                foreach (var year in Model.PromotionBatchYears)
+                                {
+                                    <option value="@year">@year</option>
+                                }
+                            }
+                        </select>
+
+                        <div class="search-bar" style="flex-grow: 1;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="manage-search" placeholder="Search name, email, enrollment..." style="width:100%;">
+                        </div>
+                    </div>
+
+                    <form method="POST" action="?page=promotion" id="bulk-manage-form">
+                        <div class="table-wrap" style="max-height: 600px; overflow-y: auto;">
+                            <table id="manage-table">
+                                <thead>
+                                    <tr>
+                                        <th width="40"><input type="checkbox" id="manage-select-all"></th>
+                                        <th>Name</th>
+                                        <th>Role</th>
+                                        <th>Batch Year</th>
+                                        <th>Email</th>
+                                        <th>Enrollment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.PromotionManageUsers == null || Model.PromotionManageUsers.Count == 0)
+                                    {
+                                        <tr><td colspan="6">No active users found.</td></tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var u in Model.PromotionManageUsers)
+                                        {
+                                            var fullName = $"{u.FirstName} {u.LastName}".Trim();
+                                            var role = u.Role ?? "";
+                                            var dataText = $"{u.FirstName} {u.LastName} {u.Email} {u.EnrollmentNumber}".ToLowerInvariant();
+                                            <tr class="manage-row" data-role="@role" data-batch="@u.BatchYear" data-text="@dataText">
+                                                <td><input type="checkbox" name="selected_users[]" value="@u.UserId" class="manage-checkbox"></td>
+                                                <td>
+                                                    @fullName
+                                                    @if (u.RoleId == 2)
+                                                    {
+                                                        <i class="fas fa-graduation-cap" title="Alumni" style="color: var(--brand); margin-left:5px;"></i>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge @(u.RoleId == 1 ? "active" : (u.RoleId == 2 ? "blocked" : "pending"))" style="@(u.RoleId == 2 ? "background-color:#6f42c1;" : "")">
+                                                        @(string.IsNullOrEmpty(role) ? "Unknown" : role)
+                                                    </span>
+                                                </td>
+                                                <td><strong>@u.BatchYear</strong></td>
+                                                <td>@u.Email</td>
+                                                <td>@(string.IsNullOrEmpty(u.EnrollmentNumber) ? "—" : u.EnrollmentNumber)</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="form-actions" style="justify-content: space-between; align-items: center; background: #f8f9fa; padding: 15px; margin-top: 0; border: 1px solid var(--muted); border-top: none;">
+                            <div>
+                                <small id="selected-count-display">0 users selected</small>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="submit" name="action" value="promote_bulk" class="btn btn-approve" onclick="return confirm('Promote selected users to Alumni?');">
+                                    <i class="fas fa-level-up-alt"></i> Promote to Alumni
+                                </button>
+                                <button type="submit" name="action" value="demote_bulk" class="btn btn-reject" onclick="return confirm('Demote selected users to Student?');">
+                                    <i class="fas fa-level-down-alt"></i> Demote to Student
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            }
+            else if (page == "add_user")
+            {
+                <div class="form-card">
+                    <form method="POST" action="?page=add_user">
+                        <input type="hidden" name="action" value="add_user">
+
+                        <div class="form-group">
+                            <label for="first_name">First Name *</label>
+                            <input type="text" id="first_name" name="first_name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="middle_name">Middle Name</label>
+                            <input type="text" id="middle_name" name="middle_name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="last_name">Last Name *</label>
+                            <input type="text" id="last_name" name="last_name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <p>The user will use this email to log in. A random password will be generated and emailed to them.</p>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batch_year">Batch Year *</label>
+                            <input type="number" id="batch_year" name="batch_year" placeholder="2025" min="2000" max="2099" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="role_id">Assign Role *</label>
+                            <p>Select the role that this user will be assigned. They will be 'Active' immediately.</p>
+                            <select id="role_id" name="role_id" required>
+                                <option value="">-- Select Role --</option>
+                                @if (Model.RolesForForm != null)
+                                {
+                                    foreach (var role in Model.RolesForForm)
+                                    {
+                                        <option value="@role.RoleId">@role.Role</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-approve">
+                                <i class="fas fa-plus"></i> Create User and Send Email
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            }
+            else if (page == "bulk_insert")
+            {
+                <div class="form-card">
+                    <form method="POST" action="?page=bulk_insert" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="bulk_insert">
+
+                        <div class="form-group">
+                            <label for="csv_file">Upload CSV/Excel File *</label>
+                            <p>File must contain 4 columns in this exact order with no header row: <code>first_name</code>, <code>middle_name</code> (optional), <code>last_name</code>, <code>email</code>.</p>
+                            <input type="file" id="csv_file" name="csv_file" accept=".csv,.xlsx,.xls" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bulk_role">Assign Role *</label>
+                            <p>This role will be applied to all users in the uploaded file.</p>
+                            <select id="bulk_role" name="bulk_role" required>
+                                <option value="">-- Select Role --</option>
+                                <option value="Student">Student</option>
+                                <option value="Alumni">Alumni</option>
+                                <option value="Faculty">Faculty</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="bulk-batch-year-group">
+                            <label for="bulk_batch_year">Batch Year *</label>
+                            <input type="number" id="bulk_batch_year" name="bulk_batch_year" placeholder="2025" min="2000" max="2099">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-approve">
+                                <i class="fas fa-upload"></i> Upload, Process & Email Users
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <div class="card"> <p>Invalid page requested.</p> </div>
+            }
+            </div>
+        </main>
+
+        <form id="block-reason-form" method="post" action="?page=suspend" style="display: none;">
+            <input type="hidden" name="action" value="block">
+            <input type="hidden" name="user_id" id="block-user-id" value="">
+            <input type="hidden" name="reason" id="block-reason" value="">
+        </form>
+
+        <script>
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            if (menuToggle && sidebar && overlay) {
+                menuToggle.addEventListener('click', function () {
+                    sidebar.classList.toggle('active');
+                    overlay.classList.toggle('active');
+                });
+
+                overlay.addEventListener('click', function () {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                });
+            }
+
+            function promptBlockReason(userId, userName) {
+                const reason = prompt(`Please provide a reason for blocking user "${userName}" (ID: ${userId}):`);
+                if (reason === null)
+                    return;
+                if (reason.trim() !== "") {
+                    document.getElementById('block-user-id').value = userId;
+                    document.getElementById('block-reason').value = reason.trim();
+                    document.getElementById('block-reason-form').submit();
+                } else {
+                    console.warn("Block reason was empty. Action cancelled.");
+                }
+            }
+
+            const printButton = document.getElementById('print-pdf-btn');
+            if (printButton) {
+                printButton.addEventListener('click', function () {
+                    const reportContent = document.getElementById('report-content');
+                    if (!reportContent)
+                        return;
+                    const startDate = document.getElementById('start_date').value || 'report';
+                    const endDate = document.getElementById('end_date').value || '';
+                    const filename = `admin_report_${startDate}_to_${endDate}.pdf`;
+                    const originalButtonText = printButton.innerHTML;
+                    printButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                    printButton.disabled = true;
+
+                    html2canvas(reportContent, {scale: 2}).then(canvas => {
+                        const {jsPDF} = window.jspdf;
+                        const pdf = new jsPDF('p', 'mm', 'a4');
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+                        const imgHeight = pdfWidth * (canvas.height / canvas.width);
+                        const imgData = canvas.toDataURL('image/png');
+                        let heightLeft = imgHeight;
+                        let position = 0;
+                        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                        heightLeft -= pdfHeight;
+                        while (heightLeft > 0) {
+                            position = -heightLeft;
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                            heightLeft -= pdfHeight;
+                        }
+                        pdf.save(filename);
+                        printButton.innerHTML = originalButtonText;
+                        printButton.disabled = false;
+                    }).catch(err => {
+                        console.error('PDF generation failed:', err);
+                        printButton.innerHTML = originalButtonText;
+                        printButton.disabled = false;
+                    });
+                });
+            }
+
+            const printUserButton = document.getElementById('print-user-pdf-btn');
+            if (printUserButton) {
+                printUserButton.addEventListener('click', function () {
+                    const reportContent = document.getElementById('user-report-content');
+                    if (!reportContent)
+                        return;
+
+                    const userName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserDetails != null ? $"{Model.UserDetails.User.FirstName}_{Model.UserDetails.User.LastName}".Trim() : "user"));
+                    const userId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserDetails != null ? Model.UserDetails.User.UserId.ToString() : "0"));
+                    const filename = `user_report_${userId}_${userName}.pdf`;
+
+                    const originalButtonText = printUserButton.innerHTML;
+                    printUserButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                    printUserButton.disabled = true;
+
+                    html2canvas(reportContent, {scale: 2}).then(canvas => {
+                        const {jsPDF} = window.jspdf;
+                        const pdf = new jsPDF('p', 'mm', 'a4');
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+                        const imgHeight = pdfWidth * (canvas.height / canvas.width);
+                        const imgData = canvas.toDataURL('image/png');
+                        let heightLeft = imgHeight;
+                        let position = 0;
+                        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                        heightLeft -= pdfHeight;
+                        while (heightLeft > 0) {
+                            position = -heightLeft;
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                            heightLeft -= pdfHeight;
+                        }
+                        pdf.save(filename);
+                        printUserButton.innerHTML = originalButtonText;
+                        printUserButton.disabled = false;
+                    }).catch(err => {
+                        console.error('PDF generation failed:', err);
+                        printUserButton.innerHTML = originalButtonText;
+                        printUserButton.disabled = false;
+                    });
+                });
+            }
+
+            $(document).ready(function () {
+                $("#user-search-input").on("keyup", function () {
+                    var value = $(this).val().toLowerCase();
+                    $("#user-table tbody tr").filter(function () {
+                        $(this).toggle($(this).data("search-term").toLowerCase().indexOf(value) > -1)
+                    });
+                });
+            });
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const searchInput = document.getElementById('promo-search');
+                const rows = document.querySelectorAll('#promo-table tbody tr');
+                if (searchInput) {
+                    searchInput.addEventListener('keyup', function() {
+                        const value = this.value.toLowerCase();
+                        rows.forEach(row => {
+                            row.style.display = row.textContent.toLowerCase().includes(value) ? '' : 'none';
+                        });
+                    });
+                }
+
+                const selectAll = document.getElementById('select-all');
+                const checkboxes = document.querySelectorAll('.user-checkbox');
+                if (selectAll) {
+                    selectAll.addEventListener('change', function() {
+                        checkboxes.forEach(cb => cb.checked = this.checked);
+                    });
+                }
+
+                const manageSearch = document.getElementById('manage-search');
+                const roleFilter = document.getElementById('manage-role-filter');
+                const batchFilter = document.getElementById('manage-batch-filter');
+                const tableRows = document.querySelectorAll('.manage-row');
+                const selectAllManage = document.getElementById('manage-select-all');
+                const manageCheckboxes = document.querySelectorAll('.manage-checkbox');
+                const countDisplay = document.getElementById('selected-count-display');
+
+                function filterManageTable() {
+                    const searchText = (manageSearch?.value || '').toLowerCase();
+                    const selectedRole = (roleFilter?.value || 'all').toLowerCase();
+                    const selectedBatch = (batchFilter?.value || 'all');
+
+                    tableRows.forEach(row => {
+                        const text = row.getAttribute('data-text') || '';
+                        const role = (row.getAttribute('data-role') || '').toLowerCase();
+                        const batch = row.getAttribute('data-batch') || '';
+
+                        const matchesSearch = text.includes(searchText);
+                        const matchesRole = (selectedRole === 'all') || (role === selectedRole);
+                        const matchesBatch = (selectedBatch === 'all') || (batch === selectedBatch);
+
+                        if (matchesSearch && matchesRole && matchesBatch) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                            const cb = row.querySelector('.manage-checkbox');
+                            if (cb) cb.checked = false;
+                        }
+                    });
+                    updateCount();
+                }
+
+                function updateCount() {
+                    const checked = document.querySelectorAll('.manage-checkbox:checked').length;
+                    if (countDisplay) countDisplay.textContent = checked + " user(s) selected";
+                }
+
+                if (manageSearch) manageSearch.addEventListener('keyup', filterManageTable);
+                if (roleFilter) roleFilter.addEventListener('change', filterManageTable);
+                if (batchFilter) batchFilter.addEventListener('change', filterManageTable);
+
+                if (selectAllManage) {
+                    selectAllManage.addEventListener('change', function() {
+                        const isChecked = this.checked;
+                        tableRows.forEach(row => {
+                            if (row.style.display !== 'none') {
+                                const cb = row.querySelector('.manage-checkbox');
+                                if (cb) cb.checked = isChecked;
+                            }
+                        });
+                        updateCount();
+                    });
+                }
+
+                manageCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', updateCount);
+                });
+
+                const roleSelect = document.getElementById('bulk_role');
+                const batchGroup = document.getElementById('bulk-batch-year-group');
+                const batchInput = document.getElementById('bulk_batch_year');
+
+                function toggleBatchYear() {
+                    if (!roleSelect || !batchGroup || !batchInput) return;
+                    const role = (roleSelect.value || '').toLowerCase();
+                    const requiresBatch = role === 'student' || role === 'alumni';
+                    batchGroup.style.display = requiresBatch ? '' : 'none';
+                    batchInput.required = requiresBatch;
+                    if (!requiresBatch) batchInput.value = '';
+                }
+
+                if (roleSelect) {
+                    roleSelect.addEventListener('change', toggleBatchYear);
+                    toggleBatchYear();
+                }
+            });
+
+            function submitSinglePromote(userId) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '?page=promotion';
+
+                const action = document.createElement('input');
+                action.type = 'hidden';
+                action.name = 'action';
+                action.value = 'promote_single';
+                form.appendChild(action);
+
+                const uid = document.createElement('input');
+                uid.type = 'hidden';
+                uid.name = 'user_id';
+                uid.value = userId;
+                form.appendChild(uid);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        </script>
+    </body>
+</html>
+
+

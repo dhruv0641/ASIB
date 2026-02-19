@@ -1,0 +1,43 @@
+@{
+    ViewData["Title"] = "Registration Successful";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/auth.css">
+    <style>
+        .container { background: white; padding: 3rem 2.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); width: 450px; max-width: 100%; text-align: center; }
+        .logo { font-size: 2.5rem; font-weight: 700; color: #0a66c2; margin-bottom: 2rem; }
+        .success-icon { font-size: 3.5rem; color: #1e8e3e; margin-bottom: 1rem; }
+        h1 { color: rgba(0, 0, 0, 0.9); font-size: 1.8rem; margin-bottom: 1rem; }
+        .message { background: #e6f4ea; border: 1px solid #34a853; color: #1e8e3e; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.5; }
+        .details { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; font-size: 0.9rem; color: rgba(0, 0, 0, 0.6); }
+        .details p { margin: 0.5rem 0; line-height: 1.6; }
+        .button { display: inline-block; padding: 12px 32px; border-radius: 24px; background: #0a66c2; color: white; text-decoration: none; font-weight: 600; transition: background 0.25s; margin-top: 1rem; }
+        .button:hover { background: #004182; }
+    </style>
+</head>
+<body>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f3f2ef; padding: 20px; box-sizing: border-box;">
+        <div class="container">
+            <div class="logo">ASIB</div>
+            <div class="success-icon">✓</div>
+            <h1>Registration Successful!</h1>
+            <div class="message">
+                Your account has been created successfully and is pending admin approval.
+            </div>
+            <div class="details">
+                <p><strong>What's next?</strong></p>
+                <p>An administrator will review your registration and approve or reject your account. You will receive an email notification once your account status is updated.</p>
+                <p>Once approved, you'll be able to log in to the platform and access all features.</p>
+            </div>
+            <a href="/auth/login" class="button">Go Back to Login</a>
+        </div>
+    </div>
+</body>
+</html>

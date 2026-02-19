@@ -1,0 +1,74 @@
+@model ASIB.Shared.DTOs.LoginRequest
+
+@{
+    ViewData["Title"] = "Login | Alumni - Student Interaction Platform";
+    var emailCookie = ViewBag.EmailCookie ?? "";
+    var rememberMe = ViewBag.RememberMe ?? false;
+    var error = ViewBag.Error ?? "";
+    var errorType = ViewBag.ErrorType ?? "error";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+    <div class="header-logo">
+        UniBond
+    </div>
+
+    <div class="auth-box">
+        <h1>Sign in</h1>
+
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="message @errorType">@Html.Raw(error)</div>
+        }
+
+        <form method="POST" action="/auth/login">
+            <div class="input-box">
+                <label>Email</label>
+                <input type="email" name="Email" value="@emailCookie" required>
+            </div>
+            <div class="input-box">
+                <label>Password</label>
+                <div style="position: relative;">
+                    <input type="password" id="Password" name="Password" required style="padding-right: 60px;">
+                    <button type="button" id="TogglePassword" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #0a66c2; cursor: pointer; font: inherit;">
+                        Show
+                    </button>
+                </div>
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="RememberMe" name="RememberMe" @(rememberMe ? "checked" : "")>
+                <label for="RememberMe" style="margin: 0;">Remember Me</label>
+            </div>
+
+            <button type="submit">Sign in</button>
+        </form>
+
+        <div class="links-container">
+            <a href="/auth/forgot-password">Forgot password?</a>
+            <div class="separator">
+                Don't have an account? <a href="/auth/register">Register now</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const togglePassword = document.getElementById("TogglePassword");
+        const passwordInput = document.getElementById("Password");
+        togglePassword.addEventListener("click", () => {
+            const isText = passwordInput.type === "text";
+            passwordInput.type = isText ? "password" : "text";
+            togglePassword.textContent = isText ? "Show" : "Hide";
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+@model ASIB.Models.ViewModels.ViewPostPageViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Post</title>
+    <script src="https://kit.fontawesome.com/e3a2608462.js" crossorigin="anonymous"></script>
+    <style>
+        /* (Pasting all CSS from Dashboard/UserDashboard for a consistent look) */
+        :root {
+            --bg-color: #f3f2ef;
+            --white-color: #ffffff;
+            --text-color: rgba(0, 0, 0, 0.9);
+            --text-muted: rgba(0, 0, 0, 0.6);
+            --brand-color: #0a66c2;
+            --border-color: #e0e0e0;
+            --card-radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--bg-color); margin: 0; padding-top: 52px; color: var(--text-color); }
+        a { text-decoration: none; color: inherit; }
+        .navbar { position: fixed; top: 0; left: 0; right: 0; height: 52px; background-color: var(--white-color); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; padding: 0 24px; z-index: 1000; }
+        .nav-container { width: 100%; max-width: 1128px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-left { display: flex; align-items: center; gap: 8px; position: relative; }
+        .nav-logo { font-size: 24px; color: var(--brand-color); }
+        .search-box { background-color: #eef3f8; border-radius: 4px; padding: 0 12px; display: flex; align-items: center; width: 280px; height: 34px; }
+        .search-box i { color: var(--text-muted); }
+        .search-box input { border: none; background: transparent; outline: none; margin-left: 8px; width: 100%; font-size: 14px; }
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 12px; cursor: pointer; transition: color 0.2s; position: relative; }
+        .nav-item:hover, .nav-item.active { color: var(--text-color); }
+        .nav-item i { font-size: 20px; margin-bottom: 2px; }
+        .nav-profile img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+        .nav-profile { position: relative; }
+        .nav-profile span { display: flex; align-items: center; gap: 4px; }
+        .dropdown-menu { position: absolute; top: 52px; right: 0; width: 240px; background-color: var(--white-color); border: 1px solid var(--border-color); border-radius: var(--card-radius); box-shadow: var(--shadow); z-index: 1100; }
+        .dropdown-header { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        .dropdown-header img { width: 48px; height: 48px; border-radius: 50%; }
+        .dropdown-menu .dropdown-link { display: block; padding: 12px 16px; font-size: 14px; }
+        .main-container { max-width: 700px; margin: 24px auto; }
+        .card { background-color: var(--white-color); border: 1px solid var(--border-color); border-radius: var(--card-radius); box-shadow: var(--shadow); overflow: hidden; }
+        .post-author-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .post-container a[href*="Dashboard/UserProfile"]:hover strong { text-decoration: underline; color: var(--brand-color); }
+        .action-btn { background: none; border: none; cursor: pointer; color: #666; font-weight: bold; padding: 10px; flex-grow: 1; border-radius: 4px; }
+        .action-btn:hover { background-color: #f3f2ef; }
+        .follow-btn { flex-shrink: 0; margin-left: auto; padding: 6px 12px; border-radius: 15px; background: transparent; border: 1px solid var(--brand-color); color: var(--brand-color); font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .follow-btn.following, .follow-btn:hover { background-color: rgba(10, 102, 194, 0.1); }
+        .hidden { display: none !important; }
+        .toast { position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 16px; border-radius: var(--card-radius); box-shadow: var(--shadow); z-index: 9999; opacity: 0; visibility: hidden; transform: translateX(100%); transition: opacity 0.3s, visibility 0.3s, transform 0.3s ease-in-out; }
+        .toast.show { opacity: 1; visibility: visible; transform: translateX(0); }
+        .toast.error { background-color: #d9534f; }
+        .comment-section { display: block !important; margin-top: 10px; } /* Always show comments */
+        .comment { display:flex; gap:10px; margin-top:10px; }
+        .comment img { width:30px; height:30px; border-radius:50%; }
+        .comment div { background:#f3f2ef; padding:8px 12px; border-radius:15px; width:100%; }
+        .comment strong { display: block; }
+        .comment p { margin:2px 0 0 0; word-wrap:break-word; }
+        /* Notification Styles */
+        .notification-badge { position: absolute; top: 2px; right: 18px; background-color: #d9534f; color: white; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 10px; line-height: 1; }
+        .notification-item { display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border-color); transition: background-color 0.2s; }
+        .notification-item:last-child { border-bottom: none; }
+        .notification-item:hover { background-color: var(--bg-color); }
+        .notification-item img { width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; object-fit: cover;}
+        .notification-item p { margin: 0; font-size: 14px; line-height: 1.4; }
+        .notification-item span { font-size: 12px; color: var(--text-muted); }
+        .notification-item.unread { background-color: #eef3f8; }
+    </style>
+</head>
+<body>
+    <div id="toast-notification" class="toast"></div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a asp-controller="Dashboard" asp-action="UserDashboard"><i class="fab fa-linkedin nav-logo"></i></a>
+                <div class="search-box"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Search" autocomplete="off"></div>
+            </div>
+            <div class="nav-right">
+                <a asp-controller="Dashboard" asp-action="UserDashboard" class="nav-item active"> <i class="fas fa-home"></i> <span>Home</span> </a>
+                <a asp-controller="MyNetwork" asp-action="Index" class="nav-item"> <i class="fas fa-user-friends"></i> <span>My Network</span> </a>
+                <a asp-controller="Event" asp-action="Index" asp-route-view="schedule" class="nav-item"> <i class="fas fa-calendar-alt"></i> <span>Events</span> </a>
+                <a asp-controller="Messages" asp-action="Index" class="nav-item"> <i class="fas fa-comment-dots"></i> <span>Messaging</span> </a>
+                <div class="nav-item" id="notification-trigger">
+                    <i class="fas fa-bell"></i> <span>Notifications</span>
+                    <span id="notification-badge" class="notification-badge hidden"></span>
+                    <div id="notification-dropdown" class="dropdown-menu hidden" style="right: 0; width: 380px; top: 52px; max-height: 500px; overflow-y: auto;">
+                        <div class="dropdown-header" style="justify-content: space-between; align-items: center;">
+                            <strong style="font-size: 16px; padding: 0;">Notifications</strong>
+                            <a asp-controller="Notifications" asp-action="Index" style="font-size: 13px; font-weight: 600; color: var(--brand-color); padding: 0; border: none;">View All</a>
+                        </div>
+                        <div id="notification-list"><div style="padding: 20px; text-align: center; color: var(--text-muted);">Loading...</div></div>
+                    </div>
+                </div>
+                <div class="nav-item nav-profile" id="me-menu-trigger">
+                    <img src="@Model.ProfilePhoto" alt="Profile">
+                    <span>Me <i class="fas fa-caret-down"></i></span>
+                    <div class="dropdown-menu hidden" id="me-menu">
+                        <div class="dropdown-header"><img src="@Model.ProfilePhoto" alt="Profile"><div><strong>@Model.UserName</strong><p>@Model.ProfileHeadline</p></div></div>
+                        <a asp-controller="UserProfile" asp-action="Index" class="dropdown-link">View Profile</a>
+                        <a asp-controller="Auth" asp-action="Logout" class="dropdown-link">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <div id="feed-container">
+            @{
+                var post = Model.Post!;
+                var followAction = post.IsFollowing ? "unfollow" : "follow";
+                var followText = post.IsFollowing ? "Following" : "Follow";
+                var followClass = post.IsFollowing ? "following" : "";
+            }
+            <div class="card post-container" style="padding:15px; text-align:left; margin-bottom:24px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <a asp-controller="UserProfile" asp-action="Index" asp-route-id="@post.AuthorId"><img src="@post.AuthorProfilePhoto" class="post-author-photo"></a>
+                    <div style="flex-grow: 1;">
+                        <a asp-controller="UserProfile" asp-action="Index" asp-route-id="@post.AuthorId"><strong data-author-name="@post.AuthorName">@post.AuthorName</strong></a>
+                        <p style="font-size:12px; color:gray; margin:0;">@post.CreatedAtText</p>
+                    </div>
+                    @if (post.AuthorId != Model.UserId)
+                    {
+                        <button class="follow-btn action-btn @followClass" data-user-id="@post.AuthorId" data-action="@followAction">
+                            @followText
+                        </button>
+                    }
+                </div>
+                <p style="margin:10px 0;">@Html.Raw(post.ContentHtml)</p>
+                @if (post.PostType == "image" && !string.IsNullOrEmpty(post.PhotoUrl))
+                {
+                    <img src="@post.PhotoUrl" style="width:100%; border-radius:8px;">
+                }
+                else if (post.PostType == "video" && !string.IsNullOrEmpty(post.PhotoUrl))
+                {
+                    <video controls style="width:100%; border-radius:8px;"><source src="@post.PhotoUrl" type="video/mp4"></video>
+                }
+                <div class="post-stats" style="display:flex; gap:15px; font-size:12px; color:gray; margin:10px 0; padding-bottom:5px; border-bottom:1px solid #e0e0e0;">
+                    <span id="likes-count-@post.PostId">@post.LikesCount Likes</span>
+                    <span id="comments-count-@post.PostId">@post.CommentsCount Comments</span>
+                    <span id="shares-count-@post.PostId">@post.SharesCount Shares</span>
+                </div>
+                <div class="post-actions" style="display:flex; justify-content:space-around; padding:5px 0; border-bottom:1px solid #e0e0e0;">
+                    <button class="action-btn like-btn" data-post-id="@post.PostId"><i class="fas fa-thumbs-up"></i> Like</button>
+                    <button class="action-btn comment-btn" data-post-id="@post.PostId"><i class="fas fa-comment"></i> Comment</button>
+                    <button class="action-btn share-btn" data-post-id="@post.PostId"><i class="fas fa-share"></i> Share</button>
+                    <button class="action-btn send-btn" data-post-id="@post.PostId"><i class="fas fa-paper-plane"></i> Send</button>
+                </div>
+                <div class="comment-section" id="comment-section-@post.PostId">
+                    <form action="/Posts/Action" method="POST" style="display:flex; gap:10px; margin-top:10px;">
+                        <input type="hidden" name="post_id" value="@post.PostId">
+                        <input type="hidden" name="action" value="comment">
+                        <input type="text" name="content" placeholder="Write a comment..." style="flex-grow:1; border:1px solid #ccc; border-radius:20px; padding: 8px 12px;">
+                        <button type="submit" style="background:#0a66c2; color:white; border:none; padding:8px 16px; border-radius:20px; cursor:pointer;">Post</button>
+                    </form>
+                    <div class="comments-list" style="margin-top:15px;">
+                        @foreach (var comment in Model.Comments)
+                        {
+                            <div class="comment"><img src="@comment.CommenterPhoto"><div><strong>@comment.CommenterName</strong><p>@Html.Raw(comment.Content)</p></div></div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+    // --- THIS SCRIPT MUST BE ADDED TO EVERY PAGE ---
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        function escapeHTML(str) {
+            const p = document.createElement("p");
+            p.textContent = (str === null || str === undefined) ? "" : str.toString();
+            return p.innerHTML;
+        }
+
+        let toastTimer;
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast-notification');
+            if (!toast) return;
+            clearTimeout(toastTimer);
+            toast.textContent = message;
+            toast.className = 'toast';
+            if (isError) toast.classList.add('error');
+            toast.classList.add('show');
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // --- Navbar Dropdown Logic ---
+        const meMenuTrigger = document.getElementById('me-menu-trigger');
+        const meMenu = document.getElementById('me-menu');
+        if (meMenuTrigger) {
+            meMenuTrigger.addEventListener('click', function (event) {
+                event.stopPropagation();
+                meMenu.classList.toggle('hidden');
+                notificationDropdown.classList.add('hidden');
+            });
+        }
+        
+        // --- NEW NOTIFICATION SCRIPT ---
+        const notificationTrigger = document.getElementById('notification-trigger');
+        const notificationDropdown = document.getElementById('notification-dropdown');
+        const notificationBadge = document.getElementById('notification-badge');
+        const notificationList = document.getElementById('notification-list');
+        
+        function getNotificationText(notification) {
+            const sender_name = `<strong>${escapeHTML(notification.first_name + ' ' + notification.last_name)}</strong>`;
+            switch (notification.type) {
+                case 'like': return `${sender_name} liked your post.`;
+                case 'comment': return `${sender_name} commented on your post.`;
+                case 'follow': return `${sender_name} started following you.`;
+                case 'connect_request': return `${sender_name} sent you a connection request.`;
+                case 'connect_accept': return `${sender_name} accepted your connection request.`;
+                case 'new_post': return `${sender_name} published a new post.`;
+                case 'message': return `${sender_name} sent you a new message.`;
+                default: return 'New notification.';
+            }
+        }
+        
+        function getNotificationLink(notification) {
+            const sender_id = notification.sender_id;
+            const entity_id = notification.entity_id;
+            switch (notification.type) {
+                case 'like':
+                case 'comment':
+                case 'new_post':
+                    return `/Dashboard/ViewPost?id=${entity_id}`;
+                case 'follow':
+                case 'connect_accept':
+                    return `/Dashboard/UserProfile?id=${sender_id}`;
+                case 'connect_request':
+                    return '/Dashboard/MyNetwork';
+                case 'message':
+                    return `/Messages/Conversation/${sender_id}`;
+                default: return '#';
+            }
+        }
+
+        function fetchNotificationCount() {
+            fetch('/Notifications/Count')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.unread_count > 0) {
+                        notificationBadge.textContent = data.unread_count;
+                        notificationBadge.classList.remove('hidden');
+                    } else {
+                        notificationBadge.classList.add('hidden');
+                    }
+                });
+        }
+        
+        function fetchNotificationList() {
+            notificationList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">Loading...</div>';
+            fetch('/Notifications/List')
+                .then(response => response.json())
+                .then(data => {
+                    notificationList.innerHTML = '';
+                    if (data.notifications && data.notifications.length > 0) {
+                        data.notifications.forEach(n => {
+                            const text = getNotificationText(n);
+                            const link = getNotificationLink(n);
+                            const isUnread = n.is_read == 0 ? 'unread' : '';
+                            
+                            const time_ago = new Date(n.created_at);
+                            const now = new Date();
+                            const diff = (now.getTime() - time_ago.getTime()) / 1000;
+                            let time_text = '';
+                            if (diff < 60) time_text = 'Just now';
+                            else if (diff < 3600) time_text = `${Math.floor(diff / 60)}m ago`;
+                            else if (diff < 86400) time_text = `${Math.floor(diff / 3600)}h ago`;
+                            else if (diff < 2592000) time_text = `${Math.floor(diff / 86400)}d ago`;
+                            else if (diff < 31536000) time_text = `${Math.floor(diff / 2592000)}mo ago`;
+                            else time_text = `${Math.floor(diff / 31536000)}y ago`;
+
+                            const item = document.createElement('a');
+                            item.href = link;
+                            item.innerHTML = `
+                                <div class="notification-item ${isUnread}">
+                                    <img src="${escapeHTML(n.profile_photo_url)}" alt="Profile">
+                                    <div>
+                                        <p>${text}</p>
+                                        <span>${time_text}</span>
+                                    </div>
+                                </div>`;
+                            notificationList.appendChild(item);
+                        });
+                    } else {
+                        notificationList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No new notifications.</div>';
+                    }
+                    fetch('/Notifications/MarkRead', { method: 'POST' });
+                    notificationBadge.classList.add('hidden');
+                });
+        }
+        
+        if (notificationTrigger) {
+            notificationTrigger.addEventListener('click', function (event) {
+                event.stopPropagation();
+                const isHidden = notificationDropdown.classList.toggle('hidden');
+                meMenu.classList.add('hidden');
+                if (!isHidden) {
+                    fetchNotificationList();
+                }
+            });
+        }
+        
+        document.addEventListener('click', function (event) {
+            if (meMenu && !meMenu.classList.contains('hidden') && !meMenuTrigger.contains(event.target)) {
+                meMenu.classList.add('hidden');
+            }
+            if (notificationDropdown && !notificationDropdown.classList.contains('hidden') && !notificationTrigger.contains(event.target)) {
+                notificationDropdown.classList.add('hidden');
+            }
+        });
+        
+        fetchNotificationCount();
+        setInterval(fetchNotificationCount, 30000);
+
+        // --- Post Action Logic (for this page) ---
+        const feedContainer = document.getElementById('feed-container');
+        if (feedContainer) {
+            feedContainer.addEventListener('click', async function (e) {
+                const targetButton = e.target.closest('.action-btn');
+                if (!targetButton) return;
+
+                if (targetButton.classList.contains('follow-btn')) {
+                    e.preventDefault();
+                    const button = targetButton;
+                    const targetUserId = button.dataset.userId;
+                    const action = button.dataset.action;
+                    const formData = new FormData();
+                    formData.append('target_user_id', targetUserId);
+                    formData.append('action', action);
+                    fetch('FollowAction', {method: 'POST', body: formData})
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                if (action === 'follow') {
+                                    button.textContent = 'Following';
+                                    button.dataset.action = 'unfollow';
+                                    button.classList.add('following');
+                                } else {
+                                    button.textContent = 'Follow';
+                                    button.dataset.action = 'follow';
+                                    button.classList.remove('following');
+                                }
+                            } else { showToast(data.message || 'Action failed.', true); }
+                        })
+                        .catch(err => showToast('A network error occurred.', true));
+                    return;
+                }
+
+                const postId = targetButton.dataset.postId;
+                if (targetButton.classList.contains('comment-btn')) {
+                    // Comment toggle logic is handled by the CSS overriding to `display: block !important`
+                    return;
+                }
+                
+                let action = '';
+                if (targetButton.classList.contains('like-btn')) action = 'like';
+                if (targetButton.classList.contains('share-btn')) action = 'share';
+                if (targetButton.classList.contains('send-btn')) action = 'send'; // No send modal on this page yet
+                if (!action) return;
+
+                const formData = new FormData();
+                formData.append('post_id', postId);
+                formData.append('action', action);
+
+                fetch('/Posts/Action', {method: 'POST', body: formData})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.counts) {
+                            document.getElementById(`likes-count-${postId}`).textContent = `${data.counts.likes_count} Likes`;
+                            document.getElementById(`comments-count-${postId}`).textContent = `${data.counts.comments_count} Comments`;
+                            document.getElementById(`shares-count-${postId}`).textContent = `${data.counts.shares_count} Shares`;
+                            if (action === 'like') targetButton.style.color = data.liked ? '#0a66c2' : '#666';
+                        } else {
+                            showToast(data.message || 'An error occurred.', true);
+                        }
+                    })
+                    .catch(error => showToast('A network error occurred.', true));
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+

@@ -1,0 +1,13 @@
+# Ignore configuration files
+appsettings*.json
+
+# Ignore build folders
+bin/
+obj/
+
+# Ignore user files
+*.user
+*.suo
+
+# Ignore VS files
+.vs/

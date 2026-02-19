@@ -1,0 +1,131 @@
+@model ASIB.Shared.DTOs.RegisterRequest
+
+@{
+    ViewData["Title"] = "Registration | Alumni Interaction Platform";
+    var errors = ViewBag.Errors as Dictionary<string, string> ?? new Dictionary<string, string>();
+    var formData = ViewBag.FormData as ASIB.Shared.DTOs.RegisterRequest ?? new ASIB.Shared.DTOs.RegisterRequest();
+    var roles = ViewBag.Roles as List<ASIB.Models.Role> ?? new List<ASIB.Models.Role>();
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>@ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/auth.css">
+    <script>
+        function toggleBatch() {
+            const roleSel = document.getElementById('RoleRequested');
+            const batchWrap = document.getElementById('batchWrap');
+            const enrollWrap = document.getElementById('enrollWrap');
+            const selectedText = roleSel.options[roleSel.selectedIndex]?.text?.toLowerCase() || '';
+            const needsBatch = selectedText.includes('student') || selectedText.includes('alumni');
+            const isStudent = selectedText.includes('student');
+            batchWrap.style.display = needsBatch ? 'block' : 'none';
+            enrollWrap.style.display = isStudent ? 'block' : 'none';
+        }
+        document.addEventListener('DOMContentLoaded', toggleBatch);
+    </script>
+</head>
+<body>
+
+<div class="header-logo">
+    Alumni<span>Connect</span>
+</div>
+
+<div class="card">
+    <h2>Make the most of your professional life</h2>
+
+    @if (errors.ContainsKey("__db"))
+    {
+        <div class="flash-error">@Html.Encode(errors["__db"])</div>
+    }
+
+    <form method="post" novalidate action="/auth/register">
+        <div class="row">
+            <label for="FirstName">First Name *</label>
+            <input type="text" id="FirstName" name="FirstName" value="@Html.Encode(formData.FirstName ?? "")" class="@(errors.ContainsKey("FirstName") ? "invalid" : "")" required>
+            @if (errors.ContainsKey("FirstName")) { <div class="error-text">@Html.Encode(errors["FirstName"])</div> }
+        </div>
+        <div class="row">
+            <label for="MiddleName">Middle Name</label>
+            <input type="text" id="MiddleName" name="MiddleName" value="@Html.Encode(formData.MiddleName ?? "")" class="@(errors.ContainsKey("MiddleName") ? "invalid" : "")">
+            @if (errors.ContainsKey("MiddleName")) { <div class="error-text">@Html.Encode(errors["MiddleName"])</div> }
+        </div>
+        <div class="row">
+            <label for="LastName">Last Name *</label>
+            <input type="text" id="LastName" name="LastName" value="@Html.Encode(formData.LastName ?? "")" class="@(errors.ContainsKey("LastName") ? "invalid" : "")" required>
+            @if (errors.ContainsKey("LastName")) { <div class="error-text">@Html.Encode(errors["LastName"])</div> }
+        </div>
+        <div class="row">
+            <label for="Email">Email *</label>
+            <input type="email" id="Email" name="Email" value="@Html.Encode(formData.Email ?? "")" class="@(errors.ContainsKey("Email") ? "invalid" : "")" required>
+            @if (errors.ContainsKey("Email")) { <div class="error-text">@Html.Encode(errors["Email"])</div> }
+        </div>
+        <div class="row">
+            <label for="ContactNumber">Contact Number (10 digits) *</label>
+            <input type="tel" id="ContactNumber" name="ContactNumber" maxlength="10" pattern="\d{10}" value="@Html.Encode(formData.ContactNumber ?? "")" class="@(errors.ContainsKey("ContactNumber") ? "invalid" : "")" required>
+            @if (errors.ContainsKey("ContactNumber")) { <div class="error-text">@Html.Encode(errors["ContactNumber"])</div> }
+        </div>
+        <div class="row">
+            <label for="Address">Address *</label>
+            <textarea id="Address" name="Address" class="@(errors.ContainsKey("Address") ? "invalid" : "")" required>@Html.Encode(formData.Address ?? "")</textarea>
+            @if (errors.ContainsKey("Address")) { <div class="error-text">@Html.Encode(errors["Address"])</div> }
+        </div>
+        <div class="row">
+            <label for="RoleRequested">Role Requested *</label>
+            <select id="RoleRequested" name="RoleRequested" onchange="toggleBatch()" class="@(errors.ContainsKey("RoleRequested") ? "invalid" : "")" required>
+                <option value="">-- Select Role --</option>
+                @foreach (var role in roles) {
+                    @if (formData.RoleRequested == role.RoleId) {
+                        <option value="@role.RoleId" selected>@Html.Encode(role.Role1)</option>
+                    } else {
+                        <option value="@role.RoleId">@Html.Encode(role.Role1)</option>
+                    }
+                }
+            </select>
+            @if (errors.ContainsKey("RoleRequested")) { <div class="error-text">@Html.Encode(errors["RoleRequested"])</div> }
+        </div>
+        <div class="row" id="batchWrap" style="display:none;">
+            <label for="BatchYear">Batch Year *</label>
+            <select id="BatchYear" name="BatchYear" class="@(errors.ContainsKey("BatchYear") ? "invalid" : "")">
+                <option value="">-- Select Year --</option>
+                @{ int currentYear = DateTime.Now.Year; for (int y = currentYear + 4; y >= 2000; y--) {
+                    @if (formData.BatchYear == y) {
+                        <option value="@y" selected>@y</option>
+                    } else {
+                        <option value="@y">@y</option>
+                    }
+                }}
+            </select>
+            @if (errors.ContainsKey("BatchYear")) { <div class="error-text">@Html.Encode(errors["BatchYear"])</div> }
+        </div>
+        <div class="row" id="enrollWrap" style="display:none;">
+            <label for="EnrollmentNumber">Enrollment Number *</label>
+            <input type="text" id="EnrollmentNumber" name="EnrollmentNumber" value="@Html.Encode(formData.EnrollmentNumber ?? "")" class="@(errors.ContainsKey("EnrollmentNumber") ? "invalid" : "")">
+            @if (errors.ContainsKey("EnrollmentNumber")) { <div class="error-text">@Html.Encode(errors["EnrollmentNumber"])</div> }
+        </div>
+        <div class="row">
+            <label for="Password">Password (6+ characters) *</label>
+            <input type="password" id="Password" name="Password" class="@(errors.ContainsKey("Password") ? "invalid" : "")" required>
+            @if (errors.ContainsKey("Password")) { <div class="error-text">@Html.Encode(errors["Password"])</div> }
+        </div>
+        <div class="row">
+            <label for="PasswordConfirm">Confirm Password *</label>
+            <input type="password" id="PasswordConfirm" name="PasswordConfirm" class="@(errors.ContainsKey("PasswordConfirm") ? "invalid" : "")" required>
+            @if (errors.ContainsKey("PasswordConfirm")) { <div class="error-text">@Html.Encode(errors["PasswordConfirm"])</div> }
+        </div>
+        <div class="actions">
+            <button class="btn" type="submit">Register</button>
+        </div>
+    </form>
+</div>
+
+<div class="login-link">
+    Already Registered? <a href="/auth/login">Sign in</a>
+</div>
+
+</body>
+</html>
